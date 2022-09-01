@@ -1,0 +1,12 @@
+[package]
+name = "haywatch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+btleplug = "0.10"
+futures = "*"
+tokio = { version = "*", features = ["rt-multi-thread", "macros"] }
+uuid = "*"
+binrw = "0.9"
+bitflags = "*"
