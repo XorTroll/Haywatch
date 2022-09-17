@@ -1,8 +1,10 @@
-use std::error::Error;
-use std::time::Duration;
-use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter, WriteType, Characteristic};
+use btleplug::api::{
+    Central, Characteristic, Manager as _, Peripheral as _, ScanFilter, WriteType,
+};
 use btleplug::platform::{Manager, Peripheral};
 use futures::stream::StreamExt;
+use std::error::Error;
+use std::time::Duration;
 use tokio::time;
 use uuid::uuid;
 
@@ -22,34 +24,66 @@ async fn send_thread(watch: Peripheral) -> Result<(), Box<dyn Error>> {
 
     println!("[haywatch.Send] Test cmd...");
 
-    watch.write(&ls02::CHAR_WS_01, &[6, 0, 1, 1, 2, 1, 1, 1], WriteType::WithResponse).await?;
+    watch
+        .write(
+            &ls02::CHAR_WS_01,
+            &[6, 0, 1, 1, 2, 1, 1, 1],
+            WriteType::WithResponse,
+        )
+        .await?;
 
     Ok(())
 }
 
-async fn notification_receive_thread(watch: Peripheral, notif_char: Characteristic) -> Result<(), Box<dyn Error>> {
+async fn notification_receive_thread(
+    watch: Peripheral,
+    notif_char: Characteristic,
+) -> Result<(), Box<dyn Error>> {
     watch.subscribe(&notif_char).await?;
 
     let mut notif_stream = watch.notifications().await?;
     loop {
         if let Some(data) = notif_stream.next().await {
-            if let Some(pair_key_resp) = ls02::cmd::read::<ls02::cmd::PairKeyResponse>(&data).await {
-                println!("[haywatch.Notify:{:?}] Watch is paired with key {:?}!", notif_char.uuid, pair_key_resp.cur_pair_key);
-            }
-            else if let Some(battery_resp) = ls02::cmd::read::<ls02::cmd::BatteryResponse>(&data).await {
-                println!("[haywatch.Notify:{:?}] Watch has {}% battery!", notif_char.uuid, battery_resp.battery_percentage);
-            }
-            else if let Some(fw_resp) = ls02::cmd::read::<ls02::cmd::FirmwareResponse>(&data).await {
-                println!("[haywatch.Notify:{:?}] Watch has firmware '{}'", notif_char.uuid, std::str::from_utf8(&fw_resp.name).unwrap());
-            }
-            else if let Some(dev_pulse_resp) = ls02::cmd::read::<ls02::cmd::DevicePulseResponse>(&data).await {
-                println!("[haywatch.Notify:{:?}] Watch sent a {:?} pulse to us!", notif_char.uuid, dev_pulse_resp.pulse_type);
-            }
-            else if let Some(weather_resp) = ls02::cmd::read::<ls02::cmd::SetWeatherResponse>(&data).await {
-                println!("[haywatch.Notify:{:?}] Successfully set {:?} weather data!", notif_char.uuid, weather_resp.weather_date);
-            }
-            else {
-                println!("[haywatch.Notify:{:?}] Watch sent unrecognized data: {:?}", notif_char.uuid, data.value);
+            if let Some(pair_key_resp) = ls02::cmd::read::<ls02::cmd::PairKeyResponse>(&data).await
+            {
+                println!(
+                    "[haywatch.Notify:{:?}] Watch is paired with key {:?}!",
+                    notif_char.uuid, pair_key_resp.cur_pair_key
+                );
+            } else if let Some(battery_resp) =
+                ls02::cmd::read::<ls02::cmd::BatteryResponse>(&data).await
+            {
+                println!(
+                    "[haywatch.Notify:{:?}] Watch has {}% battery!",
+                    notif_char.uuid, battery_resp.battery_percentage
+                );
+            } else if let Some(fw_resp) =
+                ls02::cmd::read::<ls02::cmd::FirmwareResponse>(&data).await
+            {
+                println!(
+                    "[haywatch.Notify:{:?}] Watch has firmware '{}'",
+                    notif_char.uuid,
+                    std::str::from_utf8(&fw_resp.name).unwrap()
+                );
+            } else if let Some(dev_pulse_resp) =
+                ls02::cmd::read::<ls02::cmd::DevicePulseResponse>(&data).await
+            {
+                println!(
+                    "[haywatch.Notify:{:?}] Watch sent a {:?} pulse to us!",
+                    notif_char.uuid, dev_pulse_resp.pulse_type
+                );
+            } else if let Some(weather_resp) =
+                ls02::cmd::read::<ls02::cmd::SetWeatherResponse>(&data).await
+            {
+                println!(
+                    "[haywatch.Notify:{:?}] Successfully set {:?} weather data!",
+                    notif_char.uuid, weather_resp.weather_date
+                );
+            } else {
+                println!(
+                    "[haywatch.Notify:{:?}] Watch sent unrecognized data: {:?}",
+                    notif_char.uuid, data.value
+                );
             }
         }
     }
@@ -65,16 +99,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     for adapter in adapter_list.iter() {
         println!("Starting scan...");
-        let scan_filter = ScanFilter { services: vec![uuid!("000055FF-0000-1000-8000-00805F9B34FB")] };
-        adapter.start_scan(scan_filter).await.expect("[haywatch.Main] ERROR: Can't scan BLE adapter for connected devices...");
+        let scan_filter = ScanFilter {
+            services: vec![uuid!("000055FF-0000-1000-8000-00805F9B34FB")],
+        };
+        adapter
+            .start_scan(scan_filter)
+            .await
+            .expect("[haywatch.Main] ERROR: Can't scan BLE adapter for connected devices...");
         time::sleep(Duration::from_secs(2)).await;
 
         let peripherals = adapter.peripherals().await?;
 
         if peripherals.is_empty() {
             eprintln!("[haywatch.Main] ERROR: BLE peripheral devices were not found...");
-        }
-        else {
+        } else {
             for peripheral in &peripherals {
                 let properties = peripheral.properties().await?;
                 let is_connected = peripheral.is_connected().await?;
