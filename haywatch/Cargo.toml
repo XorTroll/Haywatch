@@ -1,0 +1,15 @@
+[package]
+name = "haywatch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ls02 = { path = "../ls02" }
+btleplug = "*"
+futures = "*"
+tokio = { version = "*", features = ["rt-multi-thread", "macros"] }
+uuid = "*"
+binrw = "*"
+bitflags = "*"
+eframe = "*"
+egui_plot = "*"
